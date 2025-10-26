@@ -1,0 +1,99 @@
+use std::fs::{self, File};
+use std::io::Write;
+use std::path::Path;
+
+use bevy::{asset::ron, prelude::*};
+
+use crate::defs::{
+    EditorChildOf, EditorGltfInstance, EditorGltfInstances, IncludeInSave,
+    InstantiatedGltfInstance, TransformData,
+};
+use crate::helper_funcs::strip_assets_prefix;
+pub fn save_scene_system(
+    all_transforms: Query<&Transform>,
+    gltf_instances: Res<EditorGltfInstances>,
+) {
+    let mut gltf_instances_vec = Vec::new();
+    for instantiated_gltf_instance in &gltf_instances.0 {
+        let Ok(gltf_transform) = all_transforms.get(instantiated_gltf_instance.entity) else {
+            continue;
+        };
+        gltf_instances_vec.push(EditorGltfInstance {
+            path: instantiated_gltf_instance.path.clone(),
+            transform: TransformData::from(*gltf_transform),
+            parent: instantiated_gltf_instance.parent,
+        });
+    }
+    save_scene_instances(&gltf_instances_vec, "test.ron");
+}
+fn save_scene_instances(instances: &[EditorGltfInstance], ron_path: &str) {
+    let file_path = format!("{}/assets/{}", env!("CARGO_MANIFEST_DIR"), ron_path);
+    let ron_string = ron::to_string(instances).expect("Failed to serialize scene");
+    let mut file = File::create(file_path).expect("Failed to create RON file");
+    file.write_all(ron_string.as_bytes())
+        .expect("Failed to write RON file");
+}
+
+pub fn load_gltf_instances(ron_path: &str) -> Vec<EditorGltfInstance> {
+    let file_path = format!("{}/assets/{}", env!("CARGO_MANIFEST_DIR"), ron_path);
+    let data = fs::read_to_string(&file_path)
+        .unwrap_or_else(|e| panic!("Failed to read RON file {}: {}", file_path, e));
+
+    ron::from_str(&data).expect("Failed to parse RON file")
+}
+pub fn spawn_gltf_instances(
+    commands: &mut Commands,
+    instances: Vec<EditorGltfInstance>,
+    mut gltf_instances: ResMut<EditorGltfInstances>,
+    asset_server: Res<AssetServer>,
+) {
+    for (index, instance) in instances.into_iter().enumerate() {
+        let EditorGltfInstance {
+            path,
+            transform,
+            parent,
+        } = instance;
+        let path = Path::new(&path);
+        match strip_assets_prefix(path) {
+            Some(relative_path) => {
+                println!("Relative path inside assets: {}", relative_path.display());
+                let gltf = asset_server.load(
+                    GltfAssetLabel::Scene(0)
+                        .from_asset(relative_path.to_string_lossy().to_string()),
+                );
+                let gltf_entity = commands
+                    .spawn((
+                        Name::new(format!("test glb {}", index)),
+                        SceneRoot(gltf),
+                        IncludeInSave,
+                        Transform::from(transform),
+                    ))
+                    .id();
+
+                gltf_instances.0.push(InstantiatedGltfInstance {
+                    path: path.to_string_lossy().to_string(),
+                    entity: gltf_entity,
+                    parent,
+                });
+            }
+            None => {
+                eprintln!("Selected file is not inside the assets folder!");
+            }
+        }
+    }
+    apply_gltf_hierarchy(commands, gltf_instances);
+}
+pub fn apply_gltf_hierarchy(commands: &mut Commands, gltf_instances: ResMut<EditorGltfInstances>) {
+    for (i, instance) in gltf_instances.0.iter().enumerate() {
+        if let Some(parent_index) = instance.parent {
+            let child = instance.entity;
+            if let Some(parent_instance) = gltf_instances.0.get(parent_index) {
+                let parent = parent_instance.entity;
+                commands.entity(parent).add_child(child);
+                commands.entity(child).insert(EditorChildOf(parent));
+            } else {
+                eprintln!("Invalid parent index {} for instance {}", parent_index, i);
+            }
+        }
+    }
+}

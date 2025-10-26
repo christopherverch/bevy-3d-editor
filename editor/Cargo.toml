@@ -1,0 +1,50 @@
+[package]
+name = "editor"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { version = "^0.17", default-features = false, features = [
+    # Core & Utility
+    "std",
+    "multi_threaded",
+    "zstd_rust",
+
+    # App & Assets
+    "bevy_asset",
+    "bevy_log",
+    "bevy_state",
+
+    # Graphics & Rendering
+    "bevy_render",
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_scene",
+    "tonemapping_luts",
+    "hdr",
+    "ktx2",
+    "png",
+    "bevy_gltf",
+    "bevy_post_process",
+    "jpeg",
+
+    # UI & Interaction
+    "bevy_text",
+    "bevy_gizmos",
+    "default_font",
+    "bevy_ui",
+    "bevy_mesh_picking_backend",
+    "x11",
+
+    # Tooling, Reflection, and Animation
+    "animation",
+    "bevy_animation",
+    "debug",
+    "reflect_auto_register", 
+] }
+common = { path = "../common" }
+rfd = "0.15.4"
+serde = "1.0.228"
+bevy_anti_alias = "0.17.2"
+egui = "0.33.0"
+bevy_egui = "0.38.0"

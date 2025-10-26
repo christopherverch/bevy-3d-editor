@@ -1,0 +1,16 @@
+[package]
+name = "game_framework"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { version = "^0.16", default-features = false, features = ["bevy_asset", "bevy_render", "bevy_winit", "bevy_core_pipeline", "bevy_pbr", "bevy_scene", "bevy_text", "bevy_ui", "x11", "bevy_gltf", "png", "ktx2", "hdr", "default_font", "zstd","tonemapping_luts", "bevy_state", "multi_threaded", "bevy_animation", "animation", "dynamic_linking",
+] }
+
+bevy_egui = "0.34.1"
+bevy_kira_audio = {git= "https://github.com/christopherverch/bevy_kira_audio", default-features = false, features = ["wav"]}
+bevy-inspector-egui = "0.31.0"
+rfd = "0.15.4"
+bevy_rapier3d = "0.31.0"
+kira = "0.10.8"
+serde = "1.0.228"
